@@ -8,12 +8,10 @@ packages:
   hardware: !include vrc_mirror_hardware.yaml
   # 引入开机亮灯通用功能
   boot_light: !include common_boot_light.yaml
-  # 引入网络热点回退通用功能
-  captive_portal: !include common_captive_portal.yaml
 
 
 packages:
-  # 引入硬件定义
+  # 硬件定义与功能配置
   hardware: github://icrazt/esphome-config/vrc-switch-base.yml@main
-  # 引入开机亮灯通用功能
-  boot_light: github://icrazt/esphome-config/common_boot_light.yml@main
+  # 开机亮灯功能
+  boot_light: github://icrazt/esphome-config/vrc-switch-boot-light.yml@main
