@@ -1,0 +1,66 @@
+# vrc_mirror_hardware.yaml
+# 功能：定义 VRC-MIRROR 项目的所有硬件组件。
+# 包含传感器、开关、灯带和外部按钮的完整配置。
+
+# --- 传感器部分 ---
+sensor:
+  # 1. 电池电压检测 (PIN0)
+  - platform: adc
+    pin: GPIO0
+    name: "Battery Voltage"
+    id: battery_voltage
+    attenuation: auto
+    update_interval: 30s
+    filters:
+      # (200K + 200K) / 200K = 2.0
+      - multiply: 2.0
+    unit_of_measurement: "V"
+    accuracy_decimals: 2
+
+# --- 开关部分 ---
+switch:
+  - platform: gpio
+    pin: GPIO10
+    name: "RGB ENABLE Switch"
+    id: rgb_enable_sw
+    restore_mode: RESTORE_DEFAULT_ON
+    
+  - platform: gpio
+    pin: GPIO8
+    name: "STATUS LED"
+    id: led_status_sw
+    restore_mode: RESTORE_DEFAULT_OFF
+
+# --- 灯光部分 ---
+light:
+  - platform: neopixelbus
+    variant: WS2812
+    pin: GPIO3
+    num_leds: 22
+    name: "RGB Strip"
+    id: ws2812b_light # 这个 ID 被 common_boot_light.yaml 依赖
+    default_transition_length: 0.2s
+    restore_mode: RESTORE_DEFAULT_OFF
+    effects:
+      - addressable_rainbow:
+      - addressable_scan:
+      - addressable_twinkle:
+      - addressable_fireworks:
+      - addressable_color_wipe:
+      - addressable_flicker:
+      
+# --- 按钮/二进制传感器部分 ---
+binary_sensor:
+  # 4. PIN 4 外置开关，低电平触发
+  - platform: gpio
+    pin: 
+      number: GPIO4
+      mode: INPUT_PULLUP
+      inverted: true
+    name: "External Switch"
+    id: external_switch
+    # 当开关被按下时执行的动作
+    on_press:
+      then:
+        # 切换 WS2812B 灯带的开关状态
+        - light.toggle: ws2812b_light

@@ -1,0 +1,22 @@
+# Filename: common_boot_light.yaml
+# Description: Turns on a light with specified settings on boot.
+
+substitutions:
+  # 定义可被主文件覆盖的默认值
+  boot_light_id: ws2812b_light
+  boot_light_brightness: "40%"
+  boot_light_red: "1.0"
+  boot_light_green: "1.0"
+  boot_light_blue: "1.0"
+
+esphome:
+  on_boot:
+    # 使用较低的优先级(-10)确保在网络连接等核心服务之后执行
+    - priority: -10
+      then:
+        - light.turn_on:
+            id: !sub boot_light_id
+            brightness: !sub boot_light_brightness
+            red: !sub boot_light_red
+            green: !sub boot_light_green
+            blue: !sub boot_light_blue

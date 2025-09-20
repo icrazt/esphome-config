@@ -1,0 +1,19 @@
+# Git repo examples as a mapping
+packages:
+  # shorthand form github://username/repository/[folder/]file-path.yml[@branch-or-tag]
+  remote_package_shorthand: github://icrazt/esphome-config/vrc-switch-base.yml@main
+  
+packages:
+  # 引入硬件定义
+  hardware: !include vrc_mirror_hardware.yaml
+  # 引入开机亮灯通用功能
+  boot_light: !include common_boot_light.yaml
+  # 引入网络热点回退通用功能
+  captive_portal: !include common_captive_portal.yaml
+
+
+packages:
+  # 引入硬件定义
+  hardware: github://icrazt/esphome-config/vrc-switch-base.yml@main
+  # 引入开机亮灯通用功能
+  boot_light: github://icrazt/esphome-config/common_boot_light.yml@main
