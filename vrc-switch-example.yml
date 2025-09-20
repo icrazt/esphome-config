@@ -1,12 +1,14 @@
-# Git repo examples as a mapping
-packages:
-  # shorthand form github://username/repository/[folder/]file-path.yml[@branch-or-tag]
-  remote_package_shorthand: github://icrazt/esphome-config/vrc-switch-base.yml@main
-  
-
 packages:
   hardware-config:
     url: https://github.com/icrazt/esphome-config
     files: [vrc-switch-base.yml]  # optional; if not specified, all files will be included
     ref: master  # optional
     refresh: 0d  # optional，设置为 0 每次拉取最新内容，方便调试
+    
+    
+# Git repo examples as a mapping
+# 但下面的方式不能控制 refresh 周期
+packages:
+  # shorthand form github://username/repository/[folder/]file-path.yml[@branch-or-tag]
+  remote_package_shorthand: github://icrazt/esphome-config/vrc-switch-base.yml@main
+  
