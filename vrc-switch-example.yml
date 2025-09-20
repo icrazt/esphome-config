@@ -9,4 +9,4 @@ packages:
     url: https://github.com/icrazt/esphome-config
     files: [vrc-switch-base.yml]  # optional; if not specified, all files will be included
     ref: master  # optional
-    refresh: 0d  # optional
+    refresh: 0d  # optional，设置为 0 每次拉取最新内容，方便调试
