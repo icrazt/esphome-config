@@ -131,7 +131,7 @@ binary_sensor:
     # 短按处理 - 在低亮度与正常状态间切换
     on_click:
       - min_length: 50ms    # 最短按压时间
-        max_length: 1000ms   # 最长按压时间（500ms以内算短按）
+        max_length: 1000ms   # 最长按压时间（1000ms以内算短按）
         then:
           - lambda: |-
               auto call = id(ws2812b_light).make_call();
@@ -162,7 +162,7 @@ binary_sensor:
               
               call.perform();
       - min_length: 1001ms    # 最短按压时间
-        max_length: 4000ms   # 最长按压时间（500ms以内算短按）
+        max_length: 5000ms   # 最长按压时间
         then:
         # 步骤 1: 增加效果计数器
         - lambda: |-
