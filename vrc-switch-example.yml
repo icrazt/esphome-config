@@ -3,15 +3,10 @@ packages:
   # shorthand form github://username/repository/[folder/]file-path.yml[@branch-or-tag]
   remote_package_shorthand: github://icrazt/esphome-config/vrc-switch-base.yml@main
   
-packages:
-  # 引入硬件定义
-  hardware: !include vrc_mirror_hardware.yaml
-  # 引入开机亮灯通用功能
-  boot_light: !include common_boot_light.yaml
-
 
 packages:
-  # 硬件定义与功能配置
-  hardware: github://icrazt/esphome-config/vrc-switch-base.yml@main
-  # 开机亮灯功能
-  boot_light: github://icrazt/esphome-config/vrc-switch-boot-light.yml@main
+  hardware-config:
+    url: https://github.com/icrazt/esphome-config
+    files: [vrc-switch-base.yml]  # optional; if not specified, all files will be included
+    ref: master  # optional
+    refresh: 0d  # optional
