@@ -2,28 +2,70 @@
 # 功能：定义 VRC-MIRROR 项目的所有硬件组件。
 # 包含传感器、开关、灯带和外部按钮的完整配置。
 
-# Description: Turns on a light with specified settings on boot.
+# script 组件，用于封装可重用操作
+# https://esphome.io/components/script/
+script:
+  - id: apply_light_state
+    mode: single # 确保脚本不会同时被多次执行
+    then:
+      - lambda: |-
+          // 1. 定义效果列表 (这是唯一需要与下面 lambda 同步的地方)
+          std::vector<std::string> effects = { "None", "彩虹", "颜色擦除" };
+          
+          // 2. 获取全局变量
+          int effect_index = id(active_effect);
+          
+          // 3. 创建灯光控制指令并设置基础状态
+          auto call = id(ws2812b_light).make_call();
+          call.set_state(true); // 确保灯是亮的
+          call.set_brightness(id(normal_brightness));
+          id(low_brightness_mode) = false; // 调用此脚本意味着恢复到正常模式
 
-substitutions:
-  # 定义可被主文件覆盖的默认值
-  boot_light_id: ws2812b_light
-  boot_light_brightness: "40%"
-  boot_light_red: "1.0"
-  boot_light_green: "1.0"
-  boot_light_blue: "1.0"
+          // 4. 应用对应的灯光效果
+          if (effect_index >= effects.size()) { effect_index = 0; } // 安全检查
+
+          if (effect_index == 0) {
+            call.set_effect("None");
+            call.set_rgb(1.0, 1.0, 1.0);
+          } else {
+            call.set_effect(effects[effect_index]);
+          }
+          
+          // 5. 执行指令
+          call.perform();
 
 esphome:
   on_boot:
     # 使用较低的优先级(-10)确保在网络连接等核心服务之后执行
-    - priority: -10
+    - priority: -10 
       then:
-        - light.turn_on:
-            id: ${boot_light_id}
-            brightness: ${boot_light_brightness}
-            red: ${boot_light_red}
-            green: ${boot_light_green}
-            blue: ${boot_light_blue}
-            
+      - script.execute: apply_light_state
+
+globals:
+  # 记录灯光效果
+   - id: active_effect
+     type: int
+     restore_value: yes
+     initial_value: '0'
+   
+   # 记录是否处于低亮度模式
+   - id: low_brightness_mode
+     type: bool
+     restore_value: no
+     initial_value: 'false'
+   
+   # 记录正常亮度值
+   - id: normal_brightness
+     type: float
+     restore_value: yes
+     initial_value: '0.5'  # 由于后面 current 的判断，此数值会被覆盖
+   
+   # 定义低亮度值
+   - id: dim_brightness
+     type: float
+     restore_value: no
+     initial_value: '0.2' 
+
 # --- 传感器部分 ---
 sensor:
   # 1. 电池电压检测 (PIN0)
@@ -53,36 +95,97 @@ switch:
     id: led_status_sw
     restore_mode: RESTORE_DEFAULT_OFF
 
-# --- 灯光部分 ---
 light:
   - platform: neopixelbus
     variant: WS2812
     pin: GPIO3
     num_leds: 22
     name: "RGB Strip"
-    id: ws2812b_light # 这个 ID 被 common_boot_light.yaml 依赖
-    default_transition_length: 0.2s
+    id: ws2812b_light # 为灯带设置ID，方便自动化调用
+    default_transition_length: 0.2s #灯效过渡时间
     restore_mode: RESTORE_DEFAULT_OFF
     effects:
       - addressable_rainbow:
+          name: "彩虹"
       - addressable_scan:
+          name: "扫描"
       - addressable_twinkle:
+          name: "闪烁"
       - addressable_fireworks:
+          name: "烟花"
       - addressable_color_wipe:
+          name: "颜色擦除"
       - addressable_flicker:
+          name: "闪动"
       
-# --- 按钮/二进制传感器部分 ---
+#PIN 4 外置主开关，低电平触发
 binary_sensor:
-  # 4. PIN 4 外置开关，低电平触发
   - platform: gpio
     pin: 
       number: GPIO4
-      mode: INPUT_PULLUP
-      inverted: true
+      mode: INPUT_PULLUP # 启用内部上拉电阻，当开关未按下时，引脚保持高电平
+      inverted: true     # 设置为"反向"，当引脚为低电平（开关闭合）时，传感器状态为 ON
     name: "External Switch"
     id: external_switch
-    # 当开关被按下时执行的动作
-    on_press:
-      then:
-        # 切换 WS2812B 灯带的开关状态
-        - light.toggle: ws2812b_light
+    
+    # 短按处理 - 在低亮度与正常状态间切换
+    on_click:
+      - min_length: 50ms    # 最短按压时间
+        max_length: 1000ms   # 最长按压时间（500ms以内算短按）
+        then:
+          - lambda: |-
+              auto call = id(ws2812b_light).make_call();
+              
+              // 如果灯是关闭的，先打开灯
+              if (!id(ws2812b_light).current_values.is_on()) {
+                call.set_state(true);
+                call.set_brightness(id(normal_brightness));
+                id(low_brightness_mode) = false;
+              } else {
+                // 灯已经开启，在低亮度和正常亮度间切换
+                if (id(low_brightness_mode)) {
+                  // 当前是低亮度，切换到正常亮度
+                  call.set_brightness(id(normal_brightness));
+                  id(low_brightness_mode) = false;
+                  ESP_LOGD("custom", "切换到正常亮度: %.2f", id(normal_brightness));
+                } else {
+                  // 当前是正常亮度，先保存当前亮度，然后切换到低亮度
+                  float current = id(ws2812b_light).current_values.get_brightness();
+                  if (current > id(dim_brightness)) {
+                    id(normal_brightness) = current;
+                  }
+                  call.set_brightness(id(dim_brightness));
+                  id(low_brightness_mode) = true;
+                  ESP_LOGD("custom", "切换到低亮度: %.2f", id(dim_brightness));
+                }
+              }
+              
+              call.perform();
+      - min_length: 1001ms    # 最短按压时间
+        max_length: 4000ms   # 最长按压时间（500ms以内算短按）
+        then:
+        # 步骤 1: 增加效果计数器
+        - lambda: |-
+            // 确保灯光是开启且不在低亮度模式，如果在了就先恢复
+            if (!id(ws2812b_light).current_values.is_on() || id(low_brightness_mode)) {
+              id(apply_light_state).execute(); // 调用脚本恢复到正常状态
+            }
+
+            // 定义效果列表 (必须与脚本中的列表保持一致)
+            std::vector<std::string> effects = { "None", "彩虹", "颜色擦除" };
+            id(active_effect) = (id(active_effect) + 1) % effects.size();
+            
+            ESP_LOGD("custom", "下一个效果索引: %d", id(active_effect));
+
+        # 步骤 2: 调用脚本来应用新的效果
+        - script.execute: apply_light_state
+    
+    # # 双击关闭灯光
+    # on_double_click:
+    #   - min_length: 50ms
+    #     max_length: 350ms
+    #     then:
+    #       - light.turn_off: ws2812b_light
+    #       - lambda: |-
+    #           id(low_brightness_mode) = false;
+    #           ESP_LOGD("custom", "双击关闭灯光");
