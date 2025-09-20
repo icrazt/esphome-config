@@ -1,3 +1,6 @@
+#任选下面的配置之一加入 HA 中生成的默认配置即可
+
+# Example1 - 调试使用 每次拉取最新的配置
 packages:
   hardware-config:
     url: https://github.com/icrazt/esphome-config
@@ -5,9 +8,10 @@ packages:
     ref: master  # optional
     refresh: 0d  # optional，设置为 0 每次拉取最新内容，方便调试
     
-    
+
+# Example2
 # Git repo examples as a mapping
-# 但下面的方式不能控制 refresh 周期
+# 注意下面的方式不能控制 refresh 周期
 packages:
   # shorthand form github://username/repository/[folder/]file-path.yml[@branch-or-tag]
   remote_package_shorthand: github://icrazt/esphome-config/vrc-switch-base.yml@main
