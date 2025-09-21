@@ -117,6 +117,17 @@ light:
           name: "颜色擦除"
       - addressable_flicker:
           name: "闪动"
+    on_turn_on:
+      - lambda: |-
+          // 通过HA等方式开灯时，默认为正常模式
+          id(low_brightness_mode) = false;
+          id(switch_main_status).publish_state(true);
+          ESP_LOGD("custom", "灯光开启，进入正常模式");
+    on_turn_off:
+      - lambda: |-
+          // 任何方式关灯时，模式都应为 off
+          id(switch_main_status).publish_state(false);
+          ESP_LOGD("custom", "灯光关闭，模式关闭");
       
 #PIN 4 外置主开关，低电平触发
 binary_sensor:
@@ -141,12 +152,14 @@ binary_sensor:
                 call.set_state(true);
                 call.set_brightness(id(normal_brightness));
                 id(low_brightness_mode) = false;
+                id(switch_main_status).publish_state(true);
               } else {
                 // 灯已经开启，在低亮度和正常亮度间切换
                 if (id(low_brightness_mode)) {
                   // 当前是低亮度，切换到正常亮度
                   call.set_brightness(id(normal_brightness));
                   id(low_brightness_mode) = false;
+                  id(switch_main_status).publish_state(true);
                   ESP_LOGD("custom", "切换到正常亮度: %.2f", id(normal_brightness));
                 } else {
                   // 当前是正常亮度，先保存当前亮度，然后切换到低亮度
@@ -156,6 +169,7 @@ binary_sensor:
                   }
                   call.set_brightness(id(dim_brightness));
                   id(low_brightness_mode) = true;
+                  id(switch_main_status).publish_state(false);
                   ESP_LOGD("custom", "切换到低亮度: %.2f", id(dim_brightness));
                 }
               }
@@ -189,3 +203,11 @@ binary_sensor:
     #       - lambda: |-
     #           id(low_brightness_mode) = false;
     #           ESP_LOGD("custom", "双击关闭灯光");
+    
+  # 使用模板二进制传感器以传递设备主状态
+  - platform: template
+    name: "Switch Main Status" # 这个名字会显示在HA中
+    id: switch_main_status
+    # 传感器的初始状态将从 low_brightness_mode 全局变量中获取
+    lambda: |-
+      return !id(low_brightness_mode) && id(ws2812b_light).current_values.is_on();
